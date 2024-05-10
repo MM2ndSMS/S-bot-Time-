@@ -1,0 +1,88 @@
+/*왼쪽 바퀴*/
+#define IN1 28 // 핀 번호는 자신의 환경에 맞도록 설정
+#define IN2 29
+#define ENR 11
+/*오른쪽 바퀴*/
+#define IN3 31
+#define IN4 30
+#define ENL 10
+
+void setup()
+{
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    pinMode(IN3, OUTPUT);
+    pinMode(IN4, OUTPUT);
+    pinMode(ENL, OUTPUT);
+    pinMode(ENR, OUTPUT);
+
+    Serial.begin(115200); // Open serial monitor at 115200 baud to see ping results.
+}
+
+void motor_l(int speed)
+{
+    if (speed >= 0)
+    {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+        analogWrite(ENL, speed); // 0-255
+    }
+    else
+    {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+        analogWrite(ENL, -speed);
+    }
+}
+
+void motor_r(int speed)
+{
+    if (speed >= 0)
+    {
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+        analogWrite(ENR, speed); // 0-255
+    }
+    else
+    {
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+        analogWrite(ENR, -speed);
+    }
+}
+
+void robot_control(int left_motor_speed, int right_motor_speed)
+{
+    motor_l(left_motor_speed);
+    motor_r(right_motor_speed);
+}
+
+void loop()
+{
+  robot_control(100, 100); // 전진
+  delay(1200);
+
+  robot_control(0, 0);
+  delay(700);
+
+  robot_control(100, -100);
+  delay(520);
+
+  robot_control(0, 0);
+  delay(700);
+
+  robot_control(100, 100);
+  delay(3700);
+
+  robot_control(0, 0);
+  delay(700);
+
+  robot_control(100, -100);
+  delay(520);
+
+  robot_control(0, 0);
+  delay(700);
+
+  robot_control(100, 100);
+  delay(1000);
+}
