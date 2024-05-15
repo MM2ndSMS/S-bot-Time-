@@ -3,10 +3,10 @@
 #define motor_speed_offset 10
 #define FTRIGGER_PIN 14
 #define FECHO_PIN 15
-#define LTRIGGER_PIN 17
-#define LECHO_PIN 16
-#define RTRIGGER_PIN 19
-#define RECHO_PIN 18
+#define LTRIGGER_PIN 19
+#define LECHO_PIN 18
+#define RTRIGGER_PIN 17
+#define RECHO_PIN 16
 #define MAX_DISTANCE 100
 #define SONAR_NUM 3
 
@@ -141,15 +141,15 @@ void robot_control(int left_motor_speed, int right_motor_speed)
 void wall_following_l(int distance,int base_speed)
 {
   int i;
-  float kp=3.1;//자신의 차량에 맞게 조절
-  float kd=10;//kp의 2~5배
+  float kp=1;//자신의 차량에 맞게 조절
+  float kd=2;//kp의 2~5배
   int l_speed=0;
   int r_speed=0;
   float error=0;
   float d_error=0;
   float error_old=0;
   float speed_control;
-  int speed_control_max=20;
+  int speed_control_max=40;
   read_ultrasonic_sensor();
   Sonar_Data_Display(0);
   error=UltrasonicSensorData[1]-distance;
@@ -173,8 +173,8 @@ void wall_following_l(int distance,int base_speed)
 void wall_following_r(int distance,int base_speed)
 {
   int i;
-  float kp=3.1;//자신의 차량에 맞게 조절
-  float kd=10;//kp의 2~5배
+  float kp=1;//자신의 차량에 맞게 조절
+  float kd=2;//kp의 2~5배
   int l_speed=0;
   int r_speed=0;
   float error=0;
