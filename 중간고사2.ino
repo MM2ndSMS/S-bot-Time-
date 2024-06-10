@@ -122,7 +122,7 @@ void imu_rotation(float target_angle, bool clockwise)
     motor_B_control(HIGH, 0);
 }
 
-void wall_collision_avoid(int base_speed_left, int base_speed_right) 
+void wall_following(int base_speed_left, int base_speed_right) 
 {
     float error = (right_sonar - left_sonar) * 1.2;
     error = constrain(error, -50, 50);
@@ -132,6 +132,12 @@ void wall_collision_avoid(int base_speed_left, int base_speed_right)
 
     motor_A_control(HIGH, right_pwm);
     motor_B_control(HIGH, left_pwm);
+}
+
+void move_forward(int base_speed_left, int base_speed_right)
+{
+    motor_A_control(HIGH, base_speed_right);
+    motor_B_control(HIGH, base_speed_left);
 }
 
 void loop() 
@@ -156,7 +162,7 @@ void loop()
     switch(flag)
     {
         case 0:
-            wall_collision_avoid(200, 255);  // Left wheel 200, Right wheel 255
+            wall_following(200, 255);  // 왼쪽 바퀴 200, 오른쪽 바퀴 255
             if(left_sonar >= WALL_GAP_DISTANCE) 
             {
                 compass.read();
@@ -168,7 +174,7 @@ void loop()
             break;
 
         case 1:
-            wall_collision_avoid(200, 255);
+            move_forward(200, 255);  // 직진
             if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
             {
                 compass.read();
@@ -180,7 +186,7 @@ void loop()
             break;
 
         case 2:
-            wall_collision_avoid(200, 255);
+            move_forward(200, 255);  // 직진
             if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
             {
                 compass.read();
@@ -192,7 +198,7 @@ void loop()
             break;
 
         case 3:
-            wall_collision_avoid(200, 255);
+            wall_following(200, 255);
             if(left_sonar >= WALL_GAP_DISTANCE) 
             {
                 compass.read();
@@ -204,7 +210,7 @@ void loop()
             break;
 
         case 4:
-            wall_collision_avoid(200, 255);
+            wall_following(200, 255);
             if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
             {
                 compass.read();
@@ -216,7 +222,7 @@ void loop()
             break;
 
         case 5:
-            wall_collision_avoid(200, 255);
+            wall_following(200, 255);
             break;
     }
 }
