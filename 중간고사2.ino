@@ -1,0 +1,222 @@
+#include <Wire.h>
+#include <LSM303.h>
+#include <NewPing.h>
+
+#define SONAR_NUM 3      // Number of sensors.
+#define MAX_DISTANCE 150 // Maximum distance (in cm) to ping.
+#define WALL_GAP_DISTANCE 300  // mm
+#define WALL_GAP_DISTANCE_HALF 150 // mm
+#define MOTOR_PWM_OFFSET 10
+
+#define Front 0
+#define Left 1 
+#define Right 2
+
+#define TRIG1 50 // 초음파 센서 1번 Trig 핀 번호 (앞)
+#define ECHO1 51 // 초음파 센서 1번 Echo 핀 번호
+
+#define TRIG2 46 // 초음파 센서 2번 Trig 핀 번호 (왼쪽)
+#define ECHO2 47 // 초음파 센서 2번 Echo 핀 번호
+
+#define TRIG3 22 // 초음파 센서 3번 Trig 핀 번호 (오른쪽)
+#define ECHO3 23 // 초음파 센서 3번 Echo 핀 번호
+
+#define ENA 13
+#define IN1 11
+#define IN2 10
+#define IN3 9
+#define IN4 8
+#define ENB 12
+
+LSM303 compass;
+NewPing sonar[SONAR_NUM] = {
+    NewPing(TRIG1, ECHO1, MAX_DISTANCE),
+    NewPing(TRIG2, ECHO2, MAX_DISTANCE),
+    NewPing(TRIG3, ECHO3, MAX_DISTANCE)
+};
+
+float front_sonar = 0.0;
+float left_sonar = 0.0;
+float right_sonar = 0.0;
+float heading = 0.0;
+float target_heading_angle = 0.0;
+
+int flag = 0;
+
+void setup() 
+{
+    Wire.begin();
+    compass.init();
+    compass.enableDefault();
+    flag = 0;
+
+    pinMode(TRIG1, OUTPUT);
+    pinMode(ECHO1, INPUT);
+    pinMode(TRIG2, OUTPUT);
+    pinMode(ECHO2, INPUT);
+    pinMode(TRIG3, OUTPUT);
+    pinMode(ECHO3, INPUT);
+  
+    pinMode(ENA, OUTPUT);
+    pinMode(IN1, OUTPUT);
+    pinMode(IN2, OUTPUT);
+    pinMode(IN3, OUTPUT);
+    pinMode(IN4, OUTPUT);
+    pinMode(ENB, OUTPUT);
+  
+    Serial.begin(9600);
+}
+
+void motor_A_control(int direction, int speed) 
+{
+    if (direction == HIGH) 
+    {
+        digitalWrite(IN1, HIGH);
+        digitalWrite(IN2, LOW);
+    } 
+    else 
+    {
+        digitalWrite(IN1, LOW);
+        digitalWrite(IN2, HIGH);
+    }
+    analogWrite(ENA, speed);
+}
+
+void motor_B_control(int direction, int speed) 
+{
+    if (direction == HIGH) 
+    {
+        digitalWrite(IN3, LOW);
+        digitalWrite(IN4, HIGH);
+    } 
+    else 
+    {
+        digitalWrite(IN3, HIGH);
+        digitalWrite(IN4, LOW);
+    }
+    analogWrite(ENB, speed);
+}
+
+void imu_rotation(float target_angle, bool clockwise) 
+{
+    target_heading_angle = fmod(target_angle + 360, 360);
+    do 
+    {
+        compass.read();
+        heading = fmod(compass.heading(), 360);
+
+        if (clockwise) 
+        {
+            motor_A_control(HIGH, 250);
+            motor_B_control(LOW, 250);
+        } 
+        else 
+        {
+            motor_A_control(LOW, 250);
+            motor_B_control(HIGH, 250);
+        }
+    } 
+    while ((clockwise && heading < target_heading_angle) || (!clockwise && heading > target_heading_angle));
+
+    motor_A_control(HIGH, 0);
+    motor_B_control(HIGH, 0);
+}
+
+void wall_collision_avoid(int base_speed_left, int base_speed_right) 
+{
+    float error = (right_sonar - left_sonar) * 1.2;
+    error = constrain(error, -50, 50);
+  
+    int right_pwm = constrain(base_speed_right - error, 0, 255);
+    int left_pwm = constrain(base_speed_left + error, 0, 255);
+
+    motor_A_control(HIGH, right_pwm);
+    motor_B_control(HIGH, left_pwm);
+}
+
+void loop() 
+{
+    front_sonar = sonar[Front].ping_cm() * 8;
+    left_sonar = sonar[Left].ping_cm() * 8;
+    right_sonar = sonar[Right].ping_cm() * 8;
+
+    if (front_sonar == 0.0) front_sonar = MAX_DISTANCE * 10;
+    if (left_sonar == 0.0) left_sonar = MAX_DISTANCE * 10;
+    if (right_sonar == 0.0) right_sonar = MAX_DISTANCE * 10;
+
+    Serial.print("L: ");
+    Serial.print(left_sonar); 
+    Serial.print(" ");
+    Serial.print("F: "); 
+    Serial.print(front_sonar); 
+    Serial.print(" ");
+    Serial.print("R: "); 
+    Serial.println(right_sonar);
+
+    switch(flag)
+    {
+        case 0:
+            wall_collision_avoid(200, 255);  // Left wheel 200, Right wheel 255
+            if(left_sonar >= WALL_GAP_DISTANCE) 
+            {
+                compass.read();
+                heading = compass.heading();
+                target_heading_angle = heading - 90;
+                imu_rotation(target_heading_angle, false);
+                flag = 1;
+            }
+            break;
+
+        case 1:
+            wall_collision_avoid(200, 255);
+            if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
+            {
+                compass.read();
+                heading = compass.heading();
+                target_heading_angle = heading + 90;
+                imu_rotation(target_heading_angle, true);
+                flag = 2;
+            }
+            break;
+
+        case 2:
+            wall_collision_avoid(200, 255);
+            if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
+            {
+                compass.read();
+                heading = compass.heading();
+                target_heading_angle = heading + 180;
+                imu_rotation(target_heading_angle, true);
+                flag = 3;
+            }
+            break;
+
+        case 3:
+            wall_collision_avoid(200, 255);
+            if(left_sonar >= WALL_GAP_DISTANCE) 
+            {
+                compass.read();
+                heading = compass.heading();
+                target_heading_angle = heading - 90;
+                imu_rotation(target_heading_angle, false);
+                flag = 4;
+            }
+            break;
+
+        case 4:
+            wall_collision_avoid(200, 255);
+            if(front_sonar <= WALL_GAP_DISTANCE_HALF) 
+            {
+                compass.read();
+                heading = compass.heading();
+                target_heading_angle = heading - 90;
+                imu_rotation(target_heading_angle, false);
+                flag = 5;
+            }
+            break;
+
+        case 5:
+            wall_collision_avoid(200, 255);
+            break;
+    }
+}
